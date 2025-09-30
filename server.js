@@ -8,6 +8,7 @@ const multer = require('multer')
 const path = require('path')
 const fs = require("fs")
 const nodemailer = require('nodemailer')
+const { createClient } = require("@supabase/supabase-js")
 
 const app = express();
 app.use(express.json());
@@ -15,21 +16,11 @@ app.use(cors({ origin: '*' }))
 const usersOnline = new Set();
 const lastSeen = {};
 
-//Serve static files from uploads
-app.use("/uploads", express.static(path.join(__dirname, "uploads")))
+//Initialized supabase client
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-//Storage config
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads/"); // save in uploads/ folder
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, Date.now() + path.extname(file.originalname)); //unique filename
-    }
-})
-
-const upload = multer({ storage })
+//Multer config (store files in memory instead of disk)
+const upload = multer({ storage: multer.memoryStorage() })
 
 //Create Http + websocket server
 const server = http.createServer(app)
@@ -263,25 +254,61 @@ app.get('/messages/:userId/:receiverId', async (req, res) => {
 })
 
 // Upload route
-app.post("/upload", upload.single('image'), async (req, res) => {
-    const { userId } = req.body;
-    const newImage = `/uploads/${req.file.filename}`;
-    let profile = await Profile.findOne({ userId })
-    if (profile && profile.profileImage) {
-        //remove old image
-        const oldImage = profile.profileImage.replace("/uploads/", "");
-        const oldPath = path.join(__dirname, "uploads", oldImage);
-        if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-            console.log("Deleted old image: ", profile.profileImage)
+app.post("/upload", upload.single("image"), async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const file = req.file;
+
+        if (!file) return res.status(400).json({ error: "No file uploaded" })
+
+        //Generate unique filename
+        const fileExt = path.extname(file.originalname);
+        const fileName = `${userId}-${Date.now()}${fileExt}`;
+
+        //Find user profile
+        let profile = await Profile.findOne({ userId })
+
+        //Delete old Image from supabase if exists
+        if (profile && profile.profileImage) {
+            //Supabase public URL looks like
+            const oldFileName = profile.profileImage.split("/").pop();
+            const { error: deleteError } = await supabase.storage
+                .from("uploads")
+                .remove([oldFileName])
+
+            if (deleteError) {
+                console.warn(deleteError.message)
+            } else {
+                console.log(oldFileName)
+            }
         }
+
+        //Upload new image to supabase storage
+        const { error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(fileName, file.buffer, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: file.mimetype,
+            })
+        if (uploadError) throw uploadError;
+
+        //Get puplic url of uploaded file
+        const { data: publicUrl } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(fileName);
+
+        //Save new image url in profile
+        profile = await Profile.findOneAndUpdate(
+            { userId },
+            { profileImage: publicUrl.publicUrl },
+            { upsert: true, new: true }
+        )
+        res.send(profile)
+
+    } catch (error) {
+        console.error("Upload failed", error)
     }
-    profile = await Profile.findOneAndUpdate(
-        { userId },
-        { profileImage: newImage },
-        { upsert: true, new: true }
-    )
-    res.json({ message: 'uploaded sucessfully' })
 })
 
 //Send connection request
