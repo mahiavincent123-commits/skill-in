@@ -419,10 +419,12 @@ app.get("/skills", async(req, res) =>{
         res.json({skills})
     } catch (error){
         console.error("ESCO API error: ", error)
+    }
 })
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
 
 
 
