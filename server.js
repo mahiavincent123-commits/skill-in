@@ -10,6 +10,7 @@ const fs = require("fs")
 const nodemailer = require("nodemailer");
 const nodemailerSendgrid = require("nodemailer-sendgrid");
 const { createClient } = require("@supabase/supabase-js")
+const fetch = require('node-fetch')
 
 const app = express();
 app.use(express.json());
@@ -404,8 +405,24 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
+//query skills
+app.get("/skills", async(req, res) =>{
+    const query = req.query.query;
+    if (!query) return res.json({error: "Query is required"})
+    try{
+        const response = await fetch(`https://ec.europa.eu/esco/api/search?text=${encodeURIComponent(query)}&type=skill&language=en`);
+        const data = await response.json();
+        const skills = data.results
+        .map(item => item.title?.en)
+        .filter(Boolean)
+        .slice(0, 10);
+        res.json({skills})
+    } catch (error){
+        console.error("ESCO API error: ", error)
+})
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
 
 
