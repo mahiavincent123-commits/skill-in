@@ -387,23 +387,24 @@ const transporter = nodemailer.createTransport({
 })
 
 //Send feedbacks
-app.post('/send-email', async (req, res) => {
-    const { from, message } = req.body;
-    try {
-        await transporter.sendMail({
-            from: from,
-            to: process.env.CO_EMAIL,
-            subject: `SKILL.IN CUSTOMER: ${from}`,
-            text: message
-        }, (err, info) => {
-            console.error(info)
-        })
-        res.json({ message: 'sent' })
-    } catch (error) {
-        console.error(error)
-    }
-})
+app.post("/send-email", async (req, res) => {
+  const { from, message } = req.body;
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,  // always use your verified sender
+      replyTo: from,                 // user's email
+      to: process.env.CO_EMAIL,      // where you receive feedback
+      subject: `SKILL.IN CUSTOMER: ${from}`,
+      text: message,
+    });
+    res.json({ message: "sent" });
+  } catch (error) {
+    console.error("❌ Email failed:", error);
+    res.status(500).json({ error: "Failed to send email" });
+  }
+});
 
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
