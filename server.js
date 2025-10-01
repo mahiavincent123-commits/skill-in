@@ -14,11 +14,7 @@ const fetch = require('node-fetch')
 
 const app = express();
 app.use(express.json());
-app.use(cors({
-  origin: ["*"],
-  methods: ["GET", "POST"],
-  credentials: true
-}));
+app.use(cors());
 const usersOnline = new Set();
 const lastSeen = {};
 
@@ -428,6 +424,7 @@ app.get("/skills", async(req, res) =>{
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
 
 
 
