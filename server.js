@@ -7,7 +7,8 @@ const { Server } = require('socket.io')
 const multer = require('multer')
 const path = require('path')
 const fs = require("fs")
-const nodemailer = require('nodemailer')
+const nodemailer = require("nodemailer");
+const nodemailerSendgrid = require("nodemailer-sendgrid");
 const { createClient } = require("@supabase/supabase-js")
 
 const app = express();
@@ -378,25 +379,24 @@ app.post('/connected-users', async (req, res) => {
 })
 
 //Email API
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-    },
-})
+const transporter = nodemailer.createTransport(
+  nodemailerSendgrid({
+    apiKey: process.env.SENDGRID_API_KEY, // set this in Render's env vars
+  })
+);
 
 //Send feedbacks
 app.post("/send-email", async (req, res) => {
   const { from, message } = req.body;
+
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,  // always use your verified sender
-      replyTo: from,                 // user's email
-      to: process.env.CO_EMAIL,      // where you receive feedback
+      from: process.env.FROM_EMAIL, // must be a verified sender in SendGrid
+      to: process.env.CO_EMAIL,     // your support email
       subject: `SKILL.IN CUSTOMER: ${from}`,
       text: message,
     });
+
     res.json({ message: "sent" });
   } catch (error) {
     console.error("❌ Email failed:", error);
@@ -407,4 +407,5 @@ app.post("/send-email", async (req, res) => {
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
 
