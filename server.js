@@ -11,6 +11,7 @@ const nodemailer = require("nodemailer");
 const nodemailerSendgrid = require("nodemailer-sendgrid");
 const { createClient } = require("@supabase/supabase-js")
 const fetch = require('node-fetch')
+const { sendEmail } = require('./sendEmail')
 
 const app = express();
 app.use(express.json());
@@ -424,6 +425,7 @@ app.get("/skills", async(req, res) =>{
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
 
 
 
