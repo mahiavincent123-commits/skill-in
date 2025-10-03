@@ -395,8 +395,17 @@ app.post("/send-email", async (req, res) => {
     await transporter.sendMail({
       from: process.env.FROM_EMAIL, // must be a verified sender in SendGrid
       to: process.env.CO_EMAIL,     // your support email
-      subject: `SKILL.IN CUSTOMER: ${from}`,
+      subject: `SKILL IN`,
       text: message,
+      html: `
+    <div style="font-family: Arial, sans-serif; text-align: center;">
+      <img src="https://yoxjfzcecbbfibgapujk.supabase.co/storage/v1/object/public/uploads/default.jpg" 
+           alt="Profile Image"
+           style="width:80px; height:80px; border-radius:50%;" />
+      <h2>CUSTOMER FEEDBACK: ${from}</h2>
+      <p>${message}</p>
+    </div>
+  `
     });
 
     res.json({ message: "sent" });
@@ -425,6 +434,7 @@ app.get("/skills", async(req, res) =>{
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));
 app.listen(3000, () => console.log('Node running on http://localhost:3000'));
+
 
 
 
